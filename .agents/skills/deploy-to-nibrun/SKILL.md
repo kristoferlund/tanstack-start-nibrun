@@ -1,6 +1,6 @@
 ---
 name: deploy-to-nibrun
-description: Deploy a compiled binary to nibrun and run it as an HTTPS service. Use when asked to deploy, ship, host or run a self-contained server binary (Bun, Go, Rust, Zig, C) on nibrun, when working in a repo that targets nibrun, or when deciding whether nibrun fits an app.
+description: Deploy a compiled binary to nibrun and run it as an HTTPS service. Use when asked to deploy, ship, host or run a self-contained server binary (Bun, Go, Rust, Zig, C) or a folder of static assets on nibrun, when working in a repo that targets nibrun, or when deciding whether nibrun fits an app.
 ---
 
 # Deploy to nibrun
@@ -60,6 +60,21 @@ Three things to read off the binary before deploying rather than after:
   has to be there on the **first** deploy: a process that exits over a missing variable never
   starts serving, and the deploy fails with it.
 
+**A folder of static assets has no binary to build**: `nib` is one, and `nib serve` answers for
+whatever folder it is given, on the port the guest hands it. So the folder goes up as the app's
+`data/`, and the CLI's own Linux build as the binary that serves it:
+
+```sh
+nib run "https://github.com/ilbertt/nibrun/releases/latest/download/nib-linux-x64 serve /app/data" --name my-site --data-folder ./dist
+```
+
+A path naming a directory answers with its `index.html`, and a miss with the folder's own
+`404.html` where it has one; `serve /app/data --single-page` answers every miss with the root
+`index.html` instead, for a SPA whose routes exist only in the browser. No `--port`: `nib serve`
+binds whichever port the guest assigns. The assets ride in as data, which goes up only as the app
+is created — a rebuilt site is a new app, at a new URL, and a custom domain (`nib apps domains`)
+is what keeps an address across that.
+
 ## 3. Deploy
 
 First deploy — creates the app:
@@ -88,7 +103,7 @@ files are the whole of how anything gets onto the volume. A zip made anywhere bu
 permissions, so an executable bit does not survive one.
 
 **Every deploy after that must name the app**, or a non-interactive shell creates a second one.
-`nib apps list` finds the slug again when a later session has to redeploy:
+`nib apps list` finds the name again when a later session has to redeploy:
 
 ```sh
 nib run ./my-server --app my-app
@@ -166,11 +181,12 @@ Everything the binary can count on, and nothing else:
 | --- | --- |
 | Platform | Linux **x86_64**, glibc (Debian rootfs) |
 | Working directory | `/app` — a tmpfs the app does not own |
-| Persistent volume | `/app/data` — 8 GiB, survives every redeploy. `NIBRUN_DATA_DIR` names it |
+| Persistent volume | `/app/data` — 8 GiB, survives every redeploy. `NIBRUN_DATA_DIR` names it. Not `noexec`: a file unpacked here can be exec'd in place |
 | Port | `NIBRUN_HTTP_PORT`, and `PORT` beside it; the app **must** listen on it, on `0.0.0.0` |
 | Own hostname | `NIBRUN_HOSTNAME` is set by the guest to the app's own `<slug>.nibrun.app` |
 | Second port | Only with `--extra-public-port`: `NIBRUN_EXTRA_PUBLIC_PORT` on `NIBRUN_PUBLIC_IPV4`, TCP and UDP, assigned rather than chosen, and reached at that number and no other |
-| Ephemeral | `TMPDIR=/tmp` is a tmpfs and is lost on restart. So is everything outside `/app/data` |
+| Ephemeral | `TMPDIR=/tmp` is a tmpfs of **64 MiB** — a quarter of the RAM — and is lost on restart. So is everything outside `/app/data` |
+| Programs | None beside yours: no shell, no `tar`, no `unzip`, nothing on `$PATH`. Spawning one dies `Executable not found in $PATH` |
 | Resources | 1 vCPU, 256 MiB RAM |
 | `HOME` | `/app`, which the app cannot write: a binary that puts a cache or a config file under `~` dies of `EACCES` before it ever serves. `/app/data` is the only path it can write |
 | URL | `https://<slug>.nibrun.app`, live as soon as it boots |
@@ -180,6 +196,11 @@ and any of them you set yourself is ignored, as is `PORT`, which carries the sam
 `NIBRUN_HTTP_PORT` under the name every other host uses. `HOME` and `TMPDIR` are defaults rather
 than fixed, so one you set yourself is what the binary reads — `HOME=${NIBRUN_DATA_DIR}` is how a
 binary that insists on writing under `~` is given a home it owns.
+
+A launcher that carries a runtime and unpacks it at boot — a `node` and a Next standalone build,
+say — meets all three at once: it unpacks with its own code rather than `tar`, into `/app/data`
+rather than `/tmp` (a `node` alone is larger than `/tmp`), and execs from there. Copying out to
+`/tmp` first is what a `noexec` volume elsewhere would need, and this one is not.
 
 A binary that needs its own absolute URL — an OAuth redirect, a webhook it registers, a link in
 an email — builds it from `NIBRUN_HOSTNAME` rather than being told it, and falls back to whatever
