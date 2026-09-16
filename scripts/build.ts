@@ -1,12 +1,12 @@
 import { mkdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
-
-const PROJECT_DIR = join(import.meta.dir, '..');
-const DIST_DIR = join(PROJECT_DIR, 'dist');
-const BINARY = join(DIST_DIR, 'app');
-const SERVER_ENTRY = join(PROJECT_DIR, '.output', 'server', 'index.mjs');
-const MIGRATIONS_DIR = join(PROJECT_DIR, 'src', 'db', 'migrations');
-const buildTarget = process.env.BUILD_TARGET || 'bun-linux-x64';
+import {
+  BINARY_FILE,
+  BUILD_TARGET,
+  DIST_DIR,
+  MIGRATIONS_DIR,
+  PROJECT_DIR,
+  SERVER_ENTRY,
+} from './constants';
 
 const vite = Bun.spawn(['bun', '--bun', 'vite', 'build'], {
   cwd: PROJECT_DIR,
@@ -24,9 +24,10 @@ await mkdir(DIST_DIR, { recursive: true });
 const result = await Bun.build({
   entrypoints: [SERVER_ENTRY],
   compile: {
-    outfile: BINARY,
+    outfile: BINARY_FILE,
     assets: [MIGRATIONS_DIR],
-    ...(buildTarget === 'host' ? {} : { target: buildTarget as Bun.Build.CompileTarget }),
+    // omitted entirely (not set to undefined) so Bun falls back to the host platform
+    ...(BUILD_TARGET ? { target: BUILD_TARGET } : {}),
   },
   format: 'esm',
 });

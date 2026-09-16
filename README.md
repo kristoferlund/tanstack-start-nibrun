@@ -1,6 +1,6 @@
 # TanStack Start on Nibrun
 
-[![Deploy on nibrun](https://nibrun.com/button.svg)](https://app.nibrun.com/deploy?name=tanstack-start-nibrun&port=3000)
+[![Deploy on nibrun](https://nibrun.com/button.svg)](https://app.nibrun.com/deploy?name=tanstack-start-nibrun&binary=https%3A%2F%2Fgithub.com%2Fkristoferlund%2Ftanstack-start-nibrun%2Freleases%2Flatest%2Fdownload%2Fapp-linux-x64&port=3000&minimal)
 
 A small TanStack Start application packaged as one Linux x64 Bun binary. It renders on the server, records each server-function call in SQLite, and displays the complete call log with TanStack Query.
 
@@ -57,6 +57,13 @@ nib run ./dist/app --app tanstack-start-nibrun-vjrd7d --port 3000
 ```sh
 curl -fsS https://tanstack-start-nibrun-vjrd7d.nibrun.app/api/health
 ```
+
+### Releases
+
+For a versioned binary, run the **release** workflow from the Actions tab. It builds the Linux x64
+binary, tags the commit it ran on with the date — `v2026.9.9-1`, and a second cut that day is `-2`
+— and attaches the binary to a GitHub Release. Manual dispatch only: nothing releases on a push,
+and the button at the top of this file deploys whatever the newest release holds.
 
 ### Agent skill
 

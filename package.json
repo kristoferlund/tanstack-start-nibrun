@@ -11,6 +11,7 @@
     "build": "bun run scripts/build.ts",
     "build:app": "bun --bun vite build",
     "build:local": "BUILD_TARGET=host bun run build",
+    "release:prepare": "bun run scripts/prepare-release.ts",
     "db:gen": "bun run --bun bun-sqlgen generate 'src/db/*.ts' --migrations src/db/migrations --out src/db/queries.gen.ts --dialect sqlite",
     "check:types": "bun run db:gen --check && bun --bun tsc --noEmit",
     "check:codestyle": "bun run --bun biome check",
